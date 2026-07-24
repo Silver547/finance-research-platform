@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.env
+finance_platform.db
+chroma_store/
+.vscode/

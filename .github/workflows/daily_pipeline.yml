@@ -1,0 +1,36 @@
+name: Daily Data Pipeline
+
+on:
+  schedule:
+    - cron: '30 1 * * *'   # runs daily at 01:30 UTC — adjust to your timezone
+  workflow_dispatch: {}
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily ingestion + AI pipeline
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GOOGLE_AI_STUDIO_KEY: ${{ secrets.GOOGLE_AI_STUDIO_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          LLM_PROVIDER: gemini
+          LLM_MODEL: gemini-1.5-flash
+        run: python pipelines/orchestrator.py
+
+      - name: Upload local SQLite DB as artifact (if using SQLite, not Postgres)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: finance-platform-db
+          path: finance_platform.db
+          if-no-files-found: ignore

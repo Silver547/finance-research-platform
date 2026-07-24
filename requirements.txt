@@ -1,0 +1,27 @@
+# Core
+python-dotenv==1.0.1
+pydantic==2.8.2
+pydantic-settings==2.4.0
+SQLAlchemy==2.0.32
+
+# Dashboard
+streamlit==1.38.0
+plotly==5.23.0
+
+# Backend API (optional, for future multi-client use)
+fastapi==0.112.2
+uvicorn==0.30.6
+
+# Data ingestion
+feedparser==6.0.11
+requests==2.32.3
+yfinance==0.2.43
+pandas==2.2.2
+
+# AI / RAG
+#chromadb==0.5.5
+sentence-transformers==3.0.1
+google-generativeai==0.7.2
+
+# Technical indicators
+ta==0.11.0
