@@ -16,7 +16,7 @@ from config.settings import settings
 
 def _call_gemini(prompt: str, model: str) -> str:
     import google.generativeai as genai
-    genai.configure(api_key=settings.GOOGLE_AI_STUDIO_KEY)
+    genai.configure(api_key=settings.GOOGLE_AI_STUDIO_KEY, transport="rest")
     gen_model = genai.GenerativeModel(model or "gemini-1.5-flash")
     response = gen_model.generate_content(prompt)
     return response.text
