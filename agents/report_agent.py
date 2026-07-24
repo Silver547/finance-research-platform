@@ -49,7 +49,13 @@ def build_report(period: str = "daily") -> str:
                 "selling anything.\n\n"
                 f"{digest_material}"
             )
-            narrative = call_llm(prompt)
+            try:
+                narrative = call_llm(prompt)
+            except Exception as exc:
+                narrative = (
+                    "AI narrative unavailable today (likely hit the free daily "
+                    f"quota). Raw items are still listed below. ({exc})"
+                )
             content = f"{narrative}\n\n---\n\n### Raw items covered\n\n{digest_material}"
 
         report = Report(report_type=period, report_date=date.today(), content=content)
