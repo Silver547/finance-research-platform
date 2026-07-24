@@ -24,9 +24,9 @@ jobs:
           GOOGLE_AI_STUDIO_KEY: ${{ secrets.GOOGLE_AI_STUDIO_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           LLM_PROVIDER: gemini
-          LLM_MODEL: gemini-1.5-flash
-        run: python pipelines/orchestrator.py
-
+          LLM_MODEL: gemini-flash-lite-latest
+        run: python -m pipelines.orchestrator
+        
       - name: Upload local SQLite DB as artifact (if using SQLite, not Postgres)
         if: always()
         uses: actions/upload-artifact@v4
