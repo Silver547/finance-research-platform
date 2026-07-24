@@ -3,6 +3,7 @@ python-dotenv==1.0.1
 pydantic==2.8.2
 pydantic-settings==2.4.0
 SQLAlchemy==2.0.32
+psycopg2-binary==2.9.9
 
 # Dashboard
 streamlit==1.38.0
