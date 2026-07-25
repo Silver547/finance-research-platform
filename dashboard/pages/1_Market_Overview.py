@@ -6,9 +6,11 @@ import streamlit as st
 import plotly.graph_objects as go
 from pipelines.stocks.fetch_prices import fetch_price_history
 from config.settings import settings
+from dashboard.theme import inject_theme, PLOTLY_LAYOUT
 
-st.set_page_config(page_title="Market Overview", layout="wide")
-st.title("📈 Market Overview")
+st.set_page_config(page_title="Market Overview", layout="wide", page_icon="📈")
+inject_theme()
+st.title("Market Overview")
 
 benchmark_tickers = {"S&P 500": "^GSPC", "NASDAQ": "^IXIC", "NIFTY 50": "^NSEI", "SENSEX": "^BSESN"}
 
@@ -43,7 +45,7 @@ else:
     ))
     fig.add_trace(go.Scatter(x=df.index, y=df["MA50"], name="MA50", line=dict(width=1)))
     fig.add_trace(go.Scatter(x=df.index, y=df["MA200"], name="MA200", line=dict(width=1)))
-    fig.update_layout(template="plotly_dark", height=500, xaxis_rangeslider_visible=False)
+    fig.update_layout(**PLOTLY_LAYOUT, height=500, xaxis_rangeslider_visible=False)
     st.plotly_chart(fig, use_container_width=True)
 
     c1, c2, c3, c4 = st.columns(4)

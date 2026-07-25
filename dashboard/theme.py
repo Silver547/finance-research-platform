@@ -87,9 +87,56 @@ p, div, span, label {
 }
 
 hr { border-color: var(--border) !important; }
+[data-testid="stMetric"] {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 16px;
+}
+[data-testid="stMetricLabel"] {
+    color: var(--muted) !important;
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+[data-testid="stMetricValue"] {
+    color: var(--text) !important;
+    font-family: 'Fraunces', serif !important;
+}
+
+.stButton button {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 4px !important;
+    font-family: 'IBM Plex Sans', sans-serif !important;
+}
+.stButton button:hover {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+}
+
+[data-testid="stExpander"] {
+    background-color: var(--surface);
+    border: 1px solid var(--border) !important;
+    border-radius: 4px;
+}
+.streamlit-expanderHeader {
+    font-family: 'IBM Plex Mono', monospace !important;
+    font-size: 0.85rem !important;
+}
 </style>
 """
 
 
 def inject_theme():
     st.markdown(THEME_CSS, unsafe_allow_html=True)
+
+PLOTLY_LAYOUT = dict(
+    template="plotly_dark",
+    paper_bgcolor="#12151C",
+    plot_bgcolor="#12151C",
+    font=dict(family="IBM Plex Sans", color="#ECE7DD"),
+    colorway=["#C9A24B", "#4FAE7C", "#C1554A", "#8A8F9C"],
+)  

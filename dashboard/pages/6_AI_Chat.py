@@ -2,10 +2,13 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
+from dashboard.theme import inject_theme
+
 import streamlit as st
 from rag.chat_engine import answer_question
 
 st.set_page_config(page_title="AI Research Chat", layout="wide")
+inject_theme()
 st.title("🤖 AI Research Assistant")
 st.caption(
     "Ask about recent news, sectors, or companies. This answers from your own "

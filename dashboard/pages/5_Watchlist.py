@@ -7,7 +7,10 @@ from backend.db.session import get_session, init_db
 from backend.models.models import User, Watchlist, Company
 from dashboard.db_helpers import get_all_companies, get_news_for_company
 
+from dashboard.theme import inject_theme
+
 st.set_page_config(page_title="Watchlist", layout="wide")
+inject_theme()
 st.title("⭐ Watchlist")
 
 init_db()
