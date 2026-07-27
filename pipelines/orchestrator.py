@@ -93,6 +93,9 @@ def process_new_headlines() -> int:
                 classification=impact.classification,
                 scope=impact.scope,
                 sentiment_score=impact.sentiment_score,
+                origin=impact.origin,
+                india_relevance=impact.india_relevance,
+                likely_affected_indian_sectors=",".join(impact.likely_affected_indian_sectors),
                 model_used="configured_llm_provider",
             )
             session.add(summary_row)

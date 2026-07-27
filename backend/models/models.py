@@ -87,13 +87,15 @@ class NewsAISummary(Base):
     risks = Column(Text)
     opportunities = Column(Text)
     classification = Column(String)   # Bullish/Bearish/Neutral/Urgent
-    scope = Column(String)             # Macro/Micro/Policy/Company/Sector/Global/India-only
+    scope = Column(String)             # Macro/Micro/Policy/Company-specific/Sector-specific
     sentiment_score = Column(Float)
+    origin = Column(String)                        # Domestic | Global
+    india_relevance = Column(Text)
+    likely_affected_indian_sectors = Column(Text)   # comma-separated sector names
     model_used = Column(String)
     generated_at = Column(DateTime, default=datetime.utcnow)
 
     news = relationship("News", back_populates="ai_summary")
-
 
 class NewsCompanyTag(Base):
     __tablename__ = "news_company_tags"

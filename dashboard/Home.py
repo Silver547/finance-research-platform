@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import streamlit as st
-from dashboard.db_helpers import get_recent_news, get_latest_report
+from dashboard.db_helpers import get_recent_news, get_latest_report, parse_sectors
 from dashboard.theme import inject_theme
 
 st.set_page_config(
@@ -54,8 +54,12 @@ with col1:
                 st.write("**Long-term impact:**", summary.long_term_impact)
                 st.write("**Risks:**", summary.risks)
                 st.write("**Opportunities:**", summary.opportunities)
+                st.write("**Origin:**", summary.origin)
+                st.write("**India relevance:**", summary.india_relevance)
+                sectors = parse_sectors(summary)
+                if sectors:
+                    st.write("**Likely affected Indian sectors:**", ", ".join(sectors))
                 st.markdown(f"[Read original article]({news.url})")
-
 with col2:
     st.subheader("Today's Digest")
     report = get_latest_report("daily")

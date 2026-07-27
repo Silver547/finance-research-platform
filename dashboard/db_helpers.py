@@ -106,3 +106,9 @@ def get_latest_report(period: str = "daily"):
         )
     finally:
         session.close()
+
+def parse_sectors(summary: NewsAISummary) -> list[str]:
+    """Splits the comma-joined sectors column back into a clean list."""
+    if not summary.likely_affected_indian_sectors:
+        return []
+    return [s.strip() for s in summary.likely_affected_indian_sectors.split(",") if s.strip()]

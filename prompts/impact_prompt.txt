@@ -4,6 +4,8 @@ you never recommend buying or selling anything.
 Headline: "{headline}"
 Source: {source}
 
+Known Indian sectors you can reference: {known_industries}
+
 Return ONLY valid JSON (no markdown fences, no commentary) matching exactly this schema:
 {{
   "ai_summary": "<3-5 sentence neutral summary IN YOUR OWN WORDS, not copied from any article>",
@@ -13,6 +15,9 @@ Return ONLY valid JSON (no markdown fences, no commentary) matching exactly this
   "risks": "<1-2 sentences on what could go wrong / what to watch for>",
   "opportunities": "<1-2 sentences on potential upside / what this could enable>",
   "classification": "<one of: Bullish, Bearish, Neutral, Urgent>",
-  "scope": "<one of: Macro, Micro, Policy, Company-specific, Sector-specific, Global, India-only>",
-  "sentiment_score": <float between -1.0 and 1.0>
+  "scope": "<one of: Macro, Micro, Policy, Company-specific, Sector-specific>",
+  "sentiment_score": <float between -1.0 and 1.0>,
+  "origin": "<one of: Domestic, Global>",
+  "india_relevance": "<1-3 sentences on the ACTUAL mechanism connecting this story to Indian markets (e.g. rupee-dollar effects, crude import costs, FII/DII flows, export demand). If this is a Domestic story, describe what part of the Indian market it concerns instead. If there genuinely is no meaningful India connection, say so plainly rather than inventing one.>",
+  "likely_affected_indian_sectors": ["<zero or more sectors from the known list above that this story plausibly affects, based on reasoning about mechanism — not just keyword matching>"]
 }}
