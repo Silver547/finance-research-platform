@@ -12,10 +12,14 @@ THEME_CSS = """
 :root {
     --ink: #12151C;
     --surface: #1B1F2A;
+    --surface-raised: #232838;
     --border: #2A2F3D;
+    --border-strong: #3A4152;
     --text: #ECE7DD;
+    --text-secondary: #B8BCC7;
     --muted: #8A8F9C;
     --accent: #C9A24B;
+    --urgent: #D9812E;
     --bullish: #4FAE7C;
     --bearish: #C1554A;
     --neutral: #8A8F9C;
@@ -64,13 +68,18 @@ p, div, span, label {
     border: 1px solid currentColor;
     border-radius: 2px;
     margin-right: 8px;
-    transform: rotate(-1deg);
 }
 
 .stamp-bullish { color: var(--bullish); }
 .stamp-bearish { color: var(--bearish); }
 .stamp-neutral { color: var(--muted); }
-.stamp-urgent { color: var(--accent); }
+.stamp-urgent { color: var(--urgent); }
+
+/* Origin badge (Phase 4) — informational, not sentiment, so it stays
+   neutral-toned rather than borrowing bullish/bearish/urgent meaning.
+   Reuses .dispatch-stamp shape; only color/border-style differ. */
+.stamp-domestic { color: var(--muted); }
+.stamp-global { color: var(--muted); border-style: dashed; }
 
 .dispatch-meta {
     font-family: 'IBM Plex Mono', monospace;
@@ -84,6 +93,97 @@ p, div, span, label {
     font-weight: 600;
     font-size: 1.02rem;
     color: var(--text);
+}
+
+/* Chip component (Phase 4/5) — Risk / Opportunity / Sector tags.
+   Deliberately pill-shaped (vs. rectangular .dispatch-stamp) so extracted/
+   inferred AI content reads as distinct from classification badges.
+   Shared by article cards and the Digest hero section. */
+.chip {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin: 4px 6px 0 0;
+}
+.chip-risk {
+    background-color: rgba(193, 85, 74, 0.12);
+    color: var(--bearish);
+    border: 1px solid rgba(193, 85, 74, 0.35);
+}
+.chip-opportunity {
+    background-color: rgba(79, 174, 124, 0.12);
+    color: var(--bullish);
+    border: 1px solid rgba(79, 174, 124, 0.35);
+}
+.chip-sector {
+    background-color: var(--surface-raised);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-strong);
+}
+
+/* Digest hero section (Phase 5) — the one genuinely new component in the
+   system. No prior element represented an aggregated, page-level summary.
+   Internals (chips, section labels, focus items) all reuse existing
+   typography and semantic color tokens. */
+.digest-card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+}
+.digest-card--empty {
+    border-style: dashed;
+    border-color: var(--border-strong);
+    text-align: center;
+    color: var(--muted);
+    padding: 40px 28px;
+}
+.digest-section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 16px;
+    margin-bottom: 6px;
+}
+.digest-focus-item {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.92rem;
+    margin-bottom: 2px;
+}
+.digest-focus-positive { color: var(--bullish); }
+.digest-focus-negative { color: var(--bearish); }
+
+/* Digest hero container fix (Phase 7): a hand-opened <div class="digest-card">
+   spanning multiple st.markdown/st.caption calls never actually wraps them —
+   Streamlit renders each call as its own top-level element, so the div
+   appeared as an empty box with the real content escaping below it,
+   unstyled (confirmed visually — see Phase 7 QA screenshot).
+   Fixed by using st.container(border=True), which Streamlit does render as
+   one real wrapper around everything inside the `with` block. We style
+   that native container via its test id, using a hidden marker span +
+   :has() so only the digest container is affected, not any other bordered
+   container added later. */
+[data-testid="stVerticalBlockBorderWrapper"]:has(.digest-marker) {
+    background-color: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 6px !important;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.digest-marker-empty) {
+    border-style: dashed !important;
+    border-color: var(--border-strong) !important;
+    text-align: center;
+}
+[data-testid="stVerticalBlockBorderWrapper"]:has(.digest-marker-empty) p {
+    color: var(--muted) !important;
+}
+.digest-marker, .digest-marker-empty {
+    display: none;
 }
 
 hr { border-color: var(--border) !important; }
@@ -139,4 +239,4 @@ PLOTLY_LAYOUT = dict(
     plot_bgcolor="#12151C",
     font=dict(family="IBM Plex Sans", color="#ECE7DD"),
     colorway=["#C9A24B", "#4FAE7C", "#C1554A", "#8A8F9C"],
-)  
+)

@@ -5,7 +5,7 @@ and with Postgres/Supabase by just changing DATABASE_URL in .env.
 from datetime import datetime, date
 from sqlalchemy import (
     Column, Integer, String, Float, Text, Date, DateTime, Boolean,
-    ForeignKey, UniqueConstraint
+    ForeignKey, UniqueConstraint, JSON
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -158,6 +158,22 @@ class Report(Base):
     report_type = Column(String)  # daily | weekly | monthly
     report_date = Column(Date)
     content = Column(Text)
+    # Structured digest data (Phase 6), additive to `content`.
+    # NULL on any report generated before this migration — the dashboard
+    # treats NULL as "legacy narrative-only" and falls back to rendering
+    # `content` alone. New reports populate both fields.
+    # Shape: {
+    #   "overall_summary": str,
+    #   "major_domestic": [str, ...],
+    #   "major_global": [str, ...],
+    #   "companies_positive": [str, ...],
+    #   "companies_negative": [str, ...],
+    #   "sectors_positive": [str, ...],
+    #   "sectors_negative": [str, ...],
+    #   "risks": [str, ...],
+    #   "opportunities": [str, ...],
+    # }
+    structured_digest = Column(JSON, nullable=True)
     generated_at = Column(DateTime, default=datetime.utcnow)
 
 
