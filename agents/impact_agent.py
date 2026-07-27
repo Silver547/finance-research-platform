@@ -20,15 +20,15 @@ ALLOWED_SCOPES = {
 
 
 class ImpactResult(BaseModel):
-    ai_summary: str
-    why_it_matters: str
-    short_term_impact: str
-    long_term_impact: str
-    risks: str
-    opportunities: str
-    classification: str
-    scope: str
-    sentiment_score: float
+    ai_summary: str = ""
+    why_it_matters: str = ""
+    short_term_impact: str = ""
+    long_term_impact: str = ""
+    risks: str = ""
+    opportunities: str = ""
+    classification: str = "Neutral"
+    scope: str = "Company-specific"
+    sentiment_score: float = 0.0
 
     @field_validator("classification")
     @classmethod
