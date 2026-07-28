@@ -21,6 +21,7 @@ from pipelines.macro.fetch_macro import fetch_and_store as fetch_macro
 from agents.tagging_agent import tag_headline
 from agents.impact_agent import analyze_headline
 from agents.report_agent import build_report
+from pipelines.filings.fetch_financials import fetch_all_tracked_financials
 
 try:
     from rag.build_index import build_index
@@ -130,6 +131,9 @@ def run_daily_pipeline():
 
     logger.info("=== Step 4: Fetch macro data ===")
     fetch_macro()
+
+    logger.info("=== Step 4.5: Fetch company financials ===")
+    fetch_all_tracked_financials()
 
     if build_index:
         logger.info("=== Step 5: Build vector index ===")
