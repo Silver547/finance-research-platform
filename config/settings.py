@@ -27,10 +27,41 @@ class Settings(BaseSettings):
     # Vector store
     CHROMA_PERSIST_DIR: str = "./chroma_store"
 
-    # Tracked universe (edit this list to whatever you actually follow)
+   # Tracked universe (edit this list to whatever you actually follow)
     TRACKED_TICKERS: list[str] = [
-        "AAPL", "MSFT", "NVDA", "TSLA",
-        "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS",
+        # IT
+        "TCS.NS", "INFY.NS", "HCLTECH.NS", "WIPRO.NS", "TECHM.NS",
+        "LTIM.NS", "MPHASIS.NS", "PERSISTENT.NS", "COFORGE.NS", "LTTS.NS",
+
+        # Banking
+        "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "KOTAKBANK.NS", "AXISBANK.NS",
+        "INDUSINDBK.NS", "BANKBARODA.NS", "PNB.NS", "IDFCFIRSTB.NS", "FEDERALBNK.NS",
+
+        # Automobile
+        "MARUTI.NS", "TATAMOTORS.NS", "M&M.NS", "BAJAJ-AUTO.NS", "HEROMOTOCO.NS",
+        "EICHERMOT.NS", "TVSMOTOR.NS", "ASHOKLEY.NS", "BHARATFORG.NS",
+
+        # Pharma
+        "SUNPHARMA.NS", "DRREDDY.NS", "CIPLA.NS", "DIVISLAB.NS", "LUPIN.NS",
+        "AUROPHARMA.NS", "TORNTPHARM.NS", "ZYDUSLIFE.NS", "ALKEM.NS", "BIOCON.NS",
+
+        # FMCG
+        "HINDUNILVR.NS", "ITC.NS", "NESTLEIND.NS", "BRITANNIA.NS", "DABUR.NS",
+        "GODREJCP.NS", "MARICO.NS", "COLPAL.NS", "TATACONSUM.NS", "VBL.NS",
+
+        # Oil & Gas
+        "RELIANCE.NS", "ONGC.NS", "IOC.NS", "BPCL.NS", "HPCL.NS",
+        "GAIL.NS", "PETRONET.NS", "OIL.NS",
+
+        # Power
+        "NTPC.NS", "POWERGRID.NS", "TATAPOWER.NS", "ADANIPOWER.NS",
+        "JSWENERGY.NS", "NHPC.NS", "SJVN.NS", "TORNTPOWER.NS",
+
+        # Telecom
+        "BHARTIARTL.NS", "IDEA.NS", "INDUSTOWER.NS",
+
+        # Semiconductors (thin sector in India — design/assembly-adjacent names)
+        "DIXON.NS", "TATAELXSI.NS", "BEL.NS", "VEDANTA.NS",
     ]
 
     TRACKED_INDUSTRIES: list[str] = [
