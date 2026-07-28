@@ -23,11 +23,6 @@ from agents.impact_agent import analyze_headline
 from agents.report_agent import build_report
 from pipelines.filings.fetch_financials import fetch_all_tracked_financials
 
-try:
-    from rag.build_index import build_index
-except ImportError:
-    build_index = None
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
