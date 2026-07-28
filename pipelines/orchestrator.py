@@ -4,8 +4,8 @@ Runs the full daily pipeline end-to-end:
   2. Dedup
   3. Tag + analyze each new, non-duplicate headline (LLM)
   4. Ingest macro data
-  5. Build/update the vector index
-  6. Generate the daily report
+  4.5. Fetch company financials (quarterly/annual, via BSE)
+  5. Generate the daily report
 
 This is the single entrypoint GitHub Actions calls every day.
 Safe to re-run: every step is idempotent.
@@ -54,60 +54,93 @@ def process_new_headlines() -> int:
     (rather than crashes on) any headline that still fails."""
     session = get_session()
     processed = 0
+    skipped = 0
     try:
-        pending = (
+        pending_rows = (
             session.query(News)
             .outerjoin(NewsAISummary, NewsAISummary.news_id == News.news_id)
             .filter(NewsAISummary.summary_id.is_(None))
             .filter(News.is_duplicate.is_(False))
             .all()
         )
+        # Extract plain values up front rather than holding onto the ORM
+        # objects themselves. If the session gets swapped out mid-loop
+        # (see the reopen logic below), any leftover ORM instances from the
+        # old session become detached, and touching a lazy-loaded attribute
+        # like news.title on one of them raises DetachedInstanceError. Plain
+        # tuples of (news_id, title, source) can't go stale like that.
+        pending = [(n.news_id, n.title, n.source or "unknown") for n in pending_rows]
         logger.info("Found %d headlines pending AI processing.", len(pending))
 
-        for news in pending:
+        for news_id, title, source in pending:
+            # Everything for this headline — LLM calls AND the resulting DB
+            # writes — lives in one try block. Earlier this only wrapped the
+            # LLM calls, so a transient DB error while writing results
+            # (a dropped connection, a DNS hiccup against the Supabase
+            # pooler, etc.) had nothing catching it and crashed the whole
+            # pipeline. Now any failure at any point for this headline is
+            # treated the same way: log it, roll back / reopen if needed,
+            # skip this headline, and keep going.
             try:
-                tags = tag_headline(news.title)
+                tags = tag_headline(title)
                 time.sleep(SECONDS_BETWEEN_LLM_CALLS)
-                impact = analyze_headline(news.title, news.source or "unknown")
+                impact = analyze_headline(title, source)
                 time.sleep(SECONDS_BETWEEN_LLM_CALLS)
+
+                if impact is None:
+                    continue
+
+                summary_row = NewsAISummary(
+                    news_id=news_id,
+                    ai_summary=impact.ai_summary,
+                    why_it_matters=impact.why_it_matters,
+                    short_term_impact=impact.short_term_impact,
+                    long_term_impact=impact.long_term_impact,
+                    risks=impact.risks,
+                    opportunities=impact.opportunities,
+                    classification=impact.classification,
+                    scope=impact.scope,
+                    sentiment_score=impact.sentiment_score,
+                    origin=impact.origin,
+                    india_relevance=impact.india_relevance,
+                    likely_affected_indian_sectors=",".join(impact.likely_affected_indian_sectors),
+                    model_used="configured_llm_provider",
+                )
+                session.add(summary_row)
+
+                for ticker in tags.companies:
+                    company = _get_or_create_company(session, ticker)
+                    session.add(NewsCompanyTag(news_id=news_id, company_id=company.company_id))
+
+                for industry_name in tags.industries:
+                    industry = _get_or_create_industry(session, industry_name)
+                    session.add(NewsIndustryTag(news_id=news_id, industry_id=industry.industry_id))
+
+                session.commit()
+                processed += 1
+                logger.info("Processed %d/%d headlines so far...", processed, len(pending))
+
             except Exception as exc:
-                logger.warning("Skipping '%s' due to error: %s", news.title[:60], exc)
+                logger.warning("Skipping '%s' due to error: %s", title[:60], exc)
+                skipped += 1
+                try:
+                    session.rollback()
+                except Exception as rollback_exc:
+                    logger.warning(
+                        "Session connection was dead too, reopening: %s", rollback_exc
+                    )
+                    try:
+                        session.close()
+                    except Exception:
+                        pass  # already broken; nothing more to clean up
+                    session = get_session()
                 time.sleep(30)
                 continue
 
-            if impact is None:
-                continue
-
-            summary_row = NewsAISummary(
-                news_id=news.news_id,
-                ai_summary=impact.ai_summary,
-                why_it_matters=impact.why_it_matters,
-                short_term_impact=impact.short_term_impact,
-                long_term_impact=impact.long_term_impact,
-                risks=impact.risks,
-                opportunities=impact.opportunities,
-                classification=impact.classification,
-                scope=impact.scope,
-                sentiment_score=impact.sentiment_score,
-                origin=impact.origin,
-                india_relevance=impact.india_relevance,
-                likely_affected_indian_sectors=",".join(impact.likely_affected_indian_sectors),
-                model_used="configured_llm_provider",
-            )
-            session.add(summary_row)
-
-            for ticker in tags.companies:
-                company = _get_or_create_company(session, ticker)
-                session.add(NewsCompanyTag(news_id=news.news_id, company_id=company.company_id))
-
-            for industry_name in tags.industries:
-                industry = _get_or_create_industry(session, industry_name)
-                session.add(NewsIndustryTag(news_id=news.news_id, industry_id=industry.industry_id))
-
-            session.commit()
-            processed += 1
-            logger.info("Processed %d/%d headlines so far...", processed, len(pending))
-
+        logger.info(
+            "Finished tagging pass: %d processed, %d skipped, %d total pending.",
+            processed, skipped, len(pending),
+        )
         return processed
     finally:
         session.close()
@@ -130,13 +163,7 @@ def run_daily_pipeline():
     logger.info("=== Step 4.5: Fetch company financials ===")
     fetch_all_tracked_financials()
 
-    if build_index:
-        logger.info("=== Step 5: Build vector index ===")
-        build_index()
-    else:
-        logger.info("=== Step 5: Skipped (chromadb not installed yet) ===")
-
-    logger.info("=== Step 6: Generate daily report ===")
+    logger.info("=== Step 5: Generate daily report ===")
     build_report("daily")
 
     logger.info("=== Daily pipeline complete ===")

@@ -25,7 +25,7 @@ COUNTRIES = ["US", "IN"]  # ISO2 codes; extend as needed
 
 def fetch_world_bank_indicator(country: str, indicator_code: str) -> list[dict]:
     url = f"https://api.worldbank.org/v2/country/{country}/indicator/{indicator_code}"
-    params = {"format": "json", "per_page": 5, "mrnev": 5}  # most recent 5 non-null values
+    params = {"format": "json", "per_page": 5, "mrv": 5}  # most recent 5 non-null values
     resp = requests.get(url, params=params, timeout=30)
     resp.raise_for_status()
     payload = resp.json()
