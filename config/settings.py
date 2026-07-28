@@ -24,9 +24,7 @@ class Settings(BaseSettings):
     FMP_KEY: str = ""
     TIINGO_KEY: str = ""
 
-    # Vector store
-    CHROMA_PERSIST_DIR: str = "./chroma_store"
-
+   
    # Tracked universe (edit this list to whatever you actually follow)
     TRACKED_TICKERS: list[str] = [
         # IT

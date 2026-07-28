@@ -9,6 +9,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, relationship
 
+from pgvector.sqlalchemy import Vector
+
 Base = declarative_base()
 
 
@@ -193,11 +195,3 @@ class Watchlist(Base):
     __table_args__ = (UniqueConstraint("user_id", "company_id", name="uq_user_company"),)
 
 
-class EmbeddingIndex(Base):
-    __tablename__ = "embeddings_index"
-    embedding_id = Column(Integer, primary_key=True)
-    source_type = Column(String)  # news | filing | transcript
-    source_id = Column(Integer)
-    vector_store_id = Column(String)
-    chunk_text_preview = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
