@@ -9,8 +9,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, relationship
 
-from pgvector.sqlalchemy import Vector
-
 Base = declarative_base()
 
 
