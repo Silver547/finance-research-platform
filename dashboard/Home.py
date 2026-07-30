@@ -75,19 +75,21 @@ def _render_chip_block(css_class: str, prefix: str, items: list):
 # ---------------------------------------------------------------------------
 st.subheader("Daily Market Digest")
 
-st.selectbox(
+PERIOD_OPTIONS = {"Today": "daily", "This Week": "weekly", "This Month": "monthly"}
+
+period_label = st.selectbox(
     "Digest period",
-    ["Today"],
+    list(PERIOD_OPTIONS.keys()),
     index=0,
     label_visibility="collapsed",
     key="digest_period",
-    help="Weekly and monthly digests will appear here in a future update.",
 )
+period_key = PERIOD_OPTIONS[period_label]
 
 digest_error = False
 try:
-    with st.spinner("Loading today's digest..."):
-        report = get_latest_report("daily")
+    with st.spinner(f"Loading {period_label.lower()}'s digest..."):
+        report = get_latest_report(period_key)
 except Exception:
     report = None
     digest_error = True
@@ -95,13 +97,13 @@ except Exception:
 if digest_error:
     with st.container(border=True):
         st.markdown('<span class="digest-marker digest-marker-empty"></span>', unsafe_allow_html=True)
-        st.markdown("Something went wrong loading today's digest. Please try refreshing the page.")
+        st.markdown(f"Something went wrong loading the {period_label.lower()} digest. Please try refreshing the page.")
 
 elif report is None:
     with st.container(border=True):
         st.markdown('<span class="digest-marker digest-marker-empty"></span>', unsafe_allow_html=True)
-        st.markdown("Today's market digest isn't available yet.")
-        st.markdown("It will appear automatically after today's news analysis is complete.")
+        st.markdown(f"No {period_label.lower()} digest is available yet.")
+        st.markdown("It will appear automatically after the next scheduled report run.")
 
 elif not report.structured_digest:
     # Legacy report generated before the structured_digest migration.
@@ -218,5 +220,5 @@ elif rows:
 st.divider()
 st.caption(
     "Use the pages in the sidebar for Market Overview, Sectors, Company pages, "
-    "Macro dashboard, Watchlist, and the AI Research Chat."
+    "Macro dashboard, and Watchlist."
 )
