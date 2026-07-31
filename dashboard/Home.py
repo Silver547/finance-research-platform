@@ -374,15 +374,20 @@ elif rows:
             chips = "".join(f'<span class="chip chip-sector">{s}</span>' for s in sectors)
             sector_chips_html = f'<div style="margin-top:8px;">{chips}</div>'
 
-        st.markdown(
-            f"""<div class="dispatch-card">
-            {badges}
-            <div class="dispatch-title">{news.title}</div>
-            <div class="dispatch-meta">{news.source} · {news.published_at}</div>
-            {sector_chips_html}
-            </div>""",
-            unsafe_allow_html=True,
+        # Built as a single-line string (no embedded newlines/indentation) —
+        # a multi-line indented f-string here leaves a blank line whenever
+        # sector_chips_html is empty, and Markdown treats a blank line
+        # followed by indented text as a code block, which prints the
+        # closing </div> as literal text instead of parsing it as HTML.
+        card_html = (
+            f'<div class="dispatch-card">'
+            f'{badges}'
+            f'<div class="dispatch-title">{news.title}</div>'
+            f'<div class="dispatch-meta">{news.source} · {news.published_at}</div>'
+            f'{sector_chips_html}'
+            f'</div>'
         )
+        st.markdown(card_html, unsafe_allow_html=True)
         with st.expander("AI analysis"):
             st.write("**Summary:**", summary.ai_summary)
             st.write("**Why it matters:**", summary.why_it_matters)
