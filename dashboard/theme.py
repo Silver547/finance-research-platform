@@ -211,6 +211,14 @@ p, div, span, label {
 .hero-byline .mood-constructive { color: var(--bullish); }
 .hero-byline .mood-cautious { color: var(--bearish); }
 .hero-byline .mood-mixed, .hero-byline .mood-quiet { color: var(--muted); }
+.hero-headline {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 1.55rem;
+    line-height: 1.3;
+    color: var(--text);
+    margin-bottom: 4px;
+}
 .hero-narrative {
     font-family: 'Fraunces', serif;
     font-size: 1.15rem;

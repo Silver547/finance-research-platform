@@ -282,3 +282,32 @@ def get_focus_reasons(period: str = "daily"):
         return {"companies": company_reasons, "sectors": sector_reasons}
     finally:
         session.close()
+
+
+def get_hero_counts(period: str = "daily"):
+    """Accurate (uncapped) counts of Domestic-origin, Global-origin, and
+    Urgent-classified items for the period, for the Hero section's badge
+    row. structured_digest's major_domestic/major_global lists are capped
+    at MAX_HIGHLIGHTS (5) in report_agent.py, so they can't be used to
+    derive a true count on a day with more than 5 of either — this runs a
+    separate, lightweight query (only origin/classification columns, not
+    full rows) instead. Returns {"domestic": int, "global": int, "urgent": int}."""
+    _ensure_db()
+    session = get_session()
+    try:
+        days = DAYS_BY_PERIOD.get(period, 1)
+        cutoff = date.today() - timedelta(days=days)
+        rows = (
+            session.query(NewsAISummary.origin, NewsAISummary.classification)
+            .join(News, News.news_id == NewsAISummary.news_id)
+            .filter(News.published_at >= cutoff)
+            .filter(News.is_duplicate.is_(False))
+            .all()
+        )
+        return {
+            "domestic": sum(1 for origin, _ in rows if origin == "Domestic"),
+            "global": sum(1 for origin, _ in rows if origin == "Global"),
+            "urgent": sum(1 for _, classification in rows if classification == "Urgent"),
+        }
+    finally:
+        session.close()

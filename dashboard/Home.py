@@ -12,6 +12,7 @@ from dashboard.db_helpers import (
     get_theme_groups,
     get_transmission_items,
     get_focus_reasons,
+    get_hero_counts,
     parse_sectors,
 )
 from dashboard.theme import inject_theme
@@ -102,11 +103,11 @@ st.divider()
 # from the old digest hero, not removed — still valuable, no new section
 # needed for them).
 # ---------------------------------------------------------------------------
-st.subheader("Today's Briefing")
+st.subheader("Today's Story")
 
 digest_error = False
 try:
-    with st.spinner(f"Loading {period_label.lower()}'s briefing..."):
+    with st.spinner(f"Loading {period_label.lower()}'s story..."):
         report = get_latest_report(period_key)
 except Exception:
     report = None
@@ -114,75 +115,93 @@ except Exception:
 
 digest = report.structured_digest if (report and report.structured_digest) else None
 
+# Dot glyph per mood — emoji are fixed-color glyphs (not CSS-colorable text),
+# so "dynamic color" here means swapping which emoji renders, not recoloring
+# one fixed dot.
+MOOD_DOT = {
+    "Constructive": "🟢",
+    "Cautious": "🔴",
+    "Mixed": "🟡",
+    "Quiet": "⚪",
+}
+
 with st.container(border=True):
     if digest_error:
         st.markdown('<span class="digest-marker digest-marker-empty"></span>', unsafe_allow_html=True)
-        st.markdown('<div class="hero-eyebrow">Today\'s Briefing</div>', unsafe_allow_html=True)
-        st.markdown(f"Something went wrong loading the {period_label.lower()} briefing. Please try refreshing the page.")
+        st.markdown('<div class="hero-eyebrow">Today\'s Story</div>', unsafe_allow_html=True)
+        st.markdown(f"Something went wrong loading the {period_label.lower()} story. Please try refreshing the page.")
 
     elif report is None:
         st.markdown('<span class="digest-marker digest-marker-empty"></span>', unsafe_allow_html=True)
-        st.markdown('<div class="hero-eyebrow">Today\'s Briefing</div>', unsafe_allow_html=True)
-        st.markdown(f"No {period_label.lower()} briefing is available yet.")
+        st.markdown('<div class="hero-eyebrow">Today\'s Story</div>', unsafe_allow_html=True)
+        st.markdown(f"No {period_label.lower()} story is available yet.")
         st.markdown("It will appear automatically after the next scheduled report run.")
 
     elif digest is None:
-        # Legacy report generated before the structured_digest migration.
+        # Legacy report generated before the structured_digest migration
+        # (and therefore before the headline field existed) — falls back to
+        # report.content, with no headline to show.
         st.markdown('<span class="digest-marker"></span>', unsafe_allow_html=True)
-        st.markdown('<div class="hero-eyebrow">Today\'s Briefing</div>', unsafe_allow_html=True)
+        st.markdown('<div class="hero-eyebrow">Today\'s Story</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="hero-byline">Generated {report.generated_at}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="hero-narrative">{report.content}</div>', unsafe_allow_html=True)
 
     else:
         st.markdown('<span class="digest-marker"></span>', unsafe_allow_html=True)
 
-        # Mood computed first so it can sit inline in the byline (magazine-
-        # style), rather than as a separate floating stamp element.
         pos_count = len(digest.get("companies_positive", [])) + len(digest.get("sectors_positive", []))
         neg_count = len(digest.get("companies_negative", [])) + len(digest.get("sectors_negative", []))
         if pos_count == 0 and neg_count == 0:
-            mood_label, mood_class = "Quiet", "mood-quiet"
+            mood_label = "Quiet"
         elif pos_count > neg_count:
-            mood_label, mood_class = "Constructive", "mood-constructive"
+            mood_label = "Constructive"
         elif neg_count > pos_count:
-            mood_label, mood_class = "Cautious", "mood-cautious"
+            mood_label = "Cautious"
         else:
-            mood_label, mood_class = "Mixed", "mood-mixed"
+            mood_label = "Mixed"
 
-        st.markdown('<div class="hero-eyebrow">Today\'s Briefing</div>', unsafe_allow_html=True)
+        counts = get_hero_counts(period_key)
+
+        st.markdown('<div class="hero-eyebrow">Today\'s Story</div>', unsafe_allow_html=True)
+
+        if digest.get("headline"):
+            st.markdown(f'<div class="hero-headline">{digest["headline"]}</div>', unsafe_allow_html=True)
+
+        # Three separate metadata lines, per explicit layout decision — NOT
+        # merged into one byline. Timestamp is metadata; the mood line and
+        # the count badges are treated as a distinct editorial summary, kept
+        # visually separate for scanability.
+        st.markdown(f'<div class="hero-byline">Generated {report.generated_at}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="hero-byline">Market Mood: {mood_label}</div>', unsafe_allow_html=True)
         st.markdown(
-            f'<div class="hero-byline">Generated {report.generated_at} '
-            f'&nbsp;·&nbsp; Mood: <span class="{mood_class}">{mood_label}</span></div>',
+            f'<div class="hero-byline">'
+            f'{MOOD_DOT.get(mood_label, "⚪")} {mood_label}'
+            f'&nbsp;&nbsp;&nbsp;&nbsp;🌍 {counts["global"]} Global'
+            f'&nbsp;&nbsp;&nbsp;&nbsp;🇮🇳 {counts["domestic"]} Domestic'
+            f'&nbsp;&nbsp;&nbsp;&nbsp;⚡ {counts["urgent"]} Urgent'
+            f'</div>',
             unsafe_allow_html=True,
         )
 
         if digest.get("overall_summary"):
             st.markdown(f'<div class="hero-narrative">{digest["overall_summary"]}</div>', unsafe_allow_html=True)
 
-        # "At a glance" — open by default (still the first thing a user
-        # sees), but visually contained in an expander shell instead of a
-        # bare bullet list bleeding straight into the page.
+        # "At a glance" — unchanged from the previous hero pass. Open by
+        # default, contained in an expander shell rather than a bare bullet
+        # list. Displayed items remain capped at 5 (3 domestic + 2 global)
+        # for layout purposes, per instruction — only the badge counts
+        # above are the accurate, uncapped totals.
         top_events = (digest.get("major_domestic", [])[:3] + digest.get("major_global", [])[:2])[:5]
         if top_events:
             with st.expander(f"At a glance — {len(top_events)} things to know", expanded=True):
                 for item in top_events:
                     st.markdown(f'<div class="hero-glance-item">{item}</div>', unsafe_allow_html=True)
 
-        # "Worth watching" — collapsed by default. This is the main scroll-
-        # reduction move: risks/opportunities are often full sentences, and
-        # previously always rendered in full as oversized chip pills.
-        risks = digest.get("risks", [])
-        opportunities = digest.get("opportunities", [])
-        if risks or opportunities:
-            with st.expander("Worth watching"):
-                if risks:
-                    st.markdown('<div class="hero-watch-label">Risks</div>', unsafe_allow_html=True)
-                    for r in risks:
-                        st.markdown(f'<div class="hero-watch-item risk">{r}</div>', unsafe_allow_html=True)
-                if opportunities:
-                    st.markdown('<div class="hero-watch-label">Opportunities</div>', unsafe_allow_html=True)
-                    for o in opportunities:
-                        st.markdown(f'<div class="hero-watch-item opportunity">{o}</div>', unsafe_allow_html=True)
+        # "Worth watching" (Risks/Opportunities) intentionally removed from
+        # the Hero per instruction. The underlying data (digest["risks"],
+        # digest["opportunities"]) is untouched in report_agent.py and still
+        # populated here — just not rendered in this section. Intended for
+        # reintroduction as its own standalone analysis section later.
 
 st.divider()
 

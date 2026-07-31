@@ -2,7 +2,7 @@
 Builds a daily/weekly/monthly digest from what's already in the DB
 (no new LLM calls needed for the raw data — it just composes what the
 tagging/impact agents already produced, plus one LLM call to write the
-narrative wrap-up).
+narrative wrap-up + editorial headline).
 
 Phase 6 addition: alongside `content` (the narrative + raw-items text), this
 now also assembles `structured_digest` — structured data for the dashboard's
@@ -10,8 +10,12 @@ Digest hero section (Companies in Focus, Sectors in Focus, Risks,
 Opportunities, Domestic/Global highlights). These are derived deterministically
 from fields the tagging/impact agents already produced (classification,
 sentiment_score, origin, risks, opportunities, company/industry tags). No
-markdown parsing of the narrative is used, and no LLM calls beyond the
-existing narrative call are added.
+markdown parsing of the narrative is used.
+
+Phase 8 addition: the single narrative LLM call now also returns a short
+editorial-style headline (8-15 words) via one combined JSON response,
+rather than a second LLM call — kept to one call per report generation to
+respect the free-tier daily quota.
 """
 import argparse
 import logging
@@ -23,7 +27,7 @@ from backend.models.models import (
     News, NewsAISummary, Report, Company, Industry,
     NewsCompanyTag, NewsIndustryTag,
 )
-from utils.llm_client import call_llm
+from utils.llm_client import call_llm_json
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,6 +39,14 @@ PERIOD_DAYS = {"daily": 1, "weekly": 7, "monthly": 30}
 SENTIMENT_THRESHOLD = 0.15
 MAX_FOCUS_ITEMS = 5
 MAX_HIGHLIGHTS = 5
+
+# Fallbacks used when the combined headline+narrative LLM call fails
+# entirely (e.g. free-tier quota exceeded) or returns malformed JSON.
+FALLBACK_HEADLINE = "Today's Market Update"
+FALLBACK_NARRATIVE = (
+    "AI narrative unavailable today (likely hit the free daily quota). "
+    "Raw items are still listed below."
+)
 
 
 def _split_sectors(raw: str) -> list[str]:
@@ -169,6 +181,7 @@ def build_report(period: str = "daily") -> str:
         structured_digest = None
 
         if not rows:
+            headline = FALLBACK_HEADLINE
             content = f"No processed news items found for the {period} period."
         else:
             bullet_lines = []
@@ -182,24 +195,31 @@ def build_report(period: str = "daily") -> str:
             prompt = (
                 f"You are writing a {period} financial research digest for a student investor. "
                 "Using ONLY the bullet points below (already-summarized, already-classified "
-                "news items), write a concise narrative overview: what mattered most, any themes "
-                "connecting multiple items, and what to watch next. Do not recommend buying or "
-                "selling anything.\n\n"
+                "news items), respond with ONLY a single JSON object (no other text, no markdown "
+                "fences) with exactly two keys:\n"
+                '  "headline": an editorial-style title, approximately 8-15 words, summarizing '
+                "the single dominant market story from the items below — written like a "
+                "newspaper front-page headline, not a full sentence recap\n"
+                '  "narrative": a concise narrative overview covering what mattered most, any '
+                "themes connecting multiple items, and what to watch next\n"
+                "Do not recommend buying or selling anything in either field.\n\n"
                 f"{digest_material}"
             )
             try:
-                narrative = call_llm(prompt)
+                result = call_llm_json(prompt)
+                headline = (result.get("headline") or "").strip()
+                narrative = (result.get("narrative") or "").strip()
+                if not headline or not narrative:
+                    raise ValueError("LLM response missing 'headline' or 'narrative'")
             except Exception as exc:
                 # Log the real exception for debugging (visible in GitHub
                 # Actions run logs), but never show raw exception text
                 # (API URLs, quota metadata, etc.) to the end user — a
                 # fallback message should stay clean regardless of what
                 # actually went wrong under the hood.
-                logger.warning("Narrative generation failed for %s digest: %s", period, exc)
-                narrative = (
-                    "AI narrative unavailable today (likely hit the free daily quota). "
-                    "Raw items are still listed below."
-                )
+                logger.warning("Headline/narrative generation failed for %s digest: %s", period, exc)
+                headline = FALLBACK_HEADLINE
+                narrative = FALLBACK_NARRATIVE
             content = f"{narrative}\n\n---\n\n### Raw items covered\n\n{digest_material}"
 
             # --- Structured digest (Phase 6) ---
@@ -224,6 +244,7 @@ def build_report(period: str = "daily") -> str:
             )
 
             structured_digest = {
+                "headline": headline,
                 "overall_summary": narrative,
                 "major_domestic": _top_highlights(rows, "Domestic"),
                 "major_global": _top_highlights(rows, "Global"),
@@ -231,6 +252,10 @@ def build_report(period: str = "daily") -> str:
                 "companies_negative": companies_negative,
                 "sectors_positive": sectors_positive,
                 "sectors_negative": sectors_negative,
+                # Risks/Opportunities logic is unchanged and still populated
+                # here — only the Hero section's rendering of these was
+                # removed (Home.py), not this underlying data. Intended for
+                # reintroduction as its own analysis section later.
                 "risks": _top_texts(rows, "risks"),
                 "opportunities": _top_texts(rows, "opportunities"),
             }
