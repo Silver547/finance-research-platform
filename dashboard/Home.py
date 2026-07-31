@@ -47,15 +47,6 @@ def _greeting() -> str:
     return "Good evening"
 
 
-def _render_chip_block(css_class: str, prefix: str, items: list):
-    """Renders Risk/Opportunity items as chips — same .chip component used
-    on individual article cards. Unchanged from the previous version."""
-    if not items:
-        return
-    chips = "".join(f'<span class="chip {css_class}">{prefix}{item}</span>' for item in items)
-    st.markdown(f'<div style="margin-top:8px;">{chips}</div>', unsafe_allow_html=True)
-
-
 def _render_focus_with_reason(label: str, positive: list, negative: list, reason_map: dict):
     """Renders a Companies/Sectors-in-Focus sub-section, extended from the
     previous _render_focus_block to include a plain-language 'why' line
@@ -126,56 +117,72 @@ digest = report.structured_digest if (report and report.structured_digest) else 
 with st.container(border=True):
     if digest_error:
         st.markdown('<span class="digest-marker digest-marker-empty"></span>', unsafe_allow_html=True)
+        st.markdown('<div class="hero-eyebrow">Today\'s Briefing</div>', unsafe_allow_html=True)
         st.markdown(f"Something went wrong loading the {period_label.lower()} briefing. Please try refreshing the page.")
 
     elif report is None:
         st.markdown('<span class="digest-marker digest-marker-empty"></span>', unsafe_allow_html=True)
+        st.markdown('<div class="hero-eyebrow">Today\'s Briefing</div>', unsafe_allow_html=True)
         st.markdown(f"No {period_label.lower()} briefing is available yet.")
         st.markdown("It will appear automatically after the next scheduled report run.")
 
     elif digest is None:
         # Legacy report generated before the structured_digest migration.
         st.markdown('<span class="digest-marker"></span>', unsafe_allow_html=True)
-        st.caption(f"Generated {report.generated_at}")
-        st.markdown(report.content)
+        st.markdown('<div class="hero-eyebrow">Today\'s Briefing</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="hero-byline">Generated {report.generated_at}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="hero-narrative">{report.content}</div>', unsafe_allow_html=True)
 
     else:
         st.markdown('<span class="digest-marker"></span>', unsafe_allow_html=True)
-        st.caption(f"Generated {report.generated_at}")
 
-        if digest.get("overall_summary"):
-            st.markdown(digest["overall_summary"])
-
-        # Top events: merge domestic + global highlights and cap at 5 total.
-        # Each source list is already ranked Urgent-first / by |sentiment| in
-        # report_agent.py, so a simple 3+2 interleave keeps that ordering
-        # intact without needing a new query.
-        top_events = (digest.get("major_domestic", [])[:3] + digest.get("major_global", [])[:2])[:5]
-        if top_events:
-            st.markdown("**Top events**")
-            for item in top_events:
-                st.markdown(f"- {item}")
-
-        # Overall mood: a lightweight proxy from the digest's own positive/
-        # negative counts (zero new queries). Not a true sentiment average —
-        # see follow-up notes if you want this more rigorous.
+        # Mood computed first so it can sit inline in the byline (magazine-
+        # style), rather than as a separate floating stamp element.
         pos_count = len(digest.get("companies_positive", [])) + len(digest.get("sectors_positive", []))
         neg_count = len(digest.get("companies_negative", [])) + len(digest.get("sectors_negative", []))
         if pos_count == 0 and neg_count == 0:
-            mood_label, mood_class = "Quiet", "stamp-neutral"
+            mood_label, mood_class = "Quiet", "mood-quiet"
         elif pos_count > neg_count:
-            mood_label, mood_class = "Constructive", "stamp-bullish"
+            mood_label, mood_class = "Constructive", "mood-constructive"
         elif neg_count > pos_count:
-            mood_label, mood_class = "Cautious", "stamp-bearish"
+            mood_label, mood_class = "Cautious", "mood-cautious"
         else:
-            mood_label, mood_class = "Mixed", "stamp-neutral"
+            mood_label, mood_class = "Mixed", "mood-mixed"
+
+        st.markdown('<div class="hero-eyebrow">Today\'s Briefing</div>', unsafe_allow_html=True)
         st.markdown(
-            f'<span class="dispatch-stamp {mood_class}">Mood: {mood_label}</span>',
+            f'<div class="hero-byline">Generated {report.generated_at} '
+            f'&nbsp;·&nbsp; Mood: <span class="{mood_class}">{mood_label}</span></div>',
             unsafe_allow_html=True,
         )
 
-        _render_chip_block("chip-risk", "Risk: ", digest.get("risks", []))
-        _render_chip_block("chip-opportunity", "Opportunity: ", digest.get("opportunities", []))
+        if digest.get("overall_summary"):
+            st.markdown(f'<div class="hero-narrative">{digest["overall_summary"]}</div>', unsafe_allow_html=True)
+
+        # "At a glance" — open by default (still the first thing a user
+        # sees), but visually contained in an expander shell instead of a
+        # bare bullet list bleeding straight into the page.
+        top_events = (digest.get("major_domestic", [])[:3] + digest.get("major_global", [])[:2])[:5]
+        if top_events:
+            with st.expander(f"At a glance — {len(top_events)} things to know", expanded=True):
+                for item in top_events:
+                    st.markdown(f'<div class="hero-glance-item">{item}</div>', unsafe_allow_html=True)
+
+        # "Worth watching" — collapsed by default. This is the main scroll-
+        # reduction move: risks/opportunities are often full sentences, and
+        # previously always rendered in full as oversized chip pills.
+        risks = digest.get("risks", [])
+        opportunities = digest.get("opportunities", [])
+        if risks or opportunities:
+            with st.expander("Worth watching"):
+                if risks:
+                    st.markdown('<div class="hero-watch-label">Risks</div>', unsafe_allow_html=True)
+                    for r in risks:
+                        st.markdown(f'<div class="hero-watch-item risk">{r}</div>', unsafe_allow_html=True)
+                if opportunities:
+                    st.markdown('<div class="hero-watch-label">Opportunities</div>', unsafe_allow_html=True)
+                    for o in opportunities:
+                        st.markdown(f'<div class="hero-watch-item opportunity">{o}</div>', unsafe_allow_html=True)
 
 st.divider()
 

@@ -173,6 +173,7 @@ p, div, span, label {
     background-color: var(--surface) !important;
     border: 1px solid var(--border) !important;
     border-radius: 6px !important;
+    padding: 28px 32px !important;
 }
 [data-testid="stVerticalBlockBorderWrapper"]:has(.digest-marker-empty) {
     border-style: dashed !important;
@@ -185,6 +186,72 @@ p, div, span, label {
 .digest-marker, .digest-marker-empty {
     display: none;
 }
+
+/* Hero section editorial treatment (Today's Briefing redesign) — a
+   "morning briefing" masthead: eyebrow label, a byline combining
+   timestamp + mood (instead of a floating disconnected stamp), and the
+   AI narrative set in serif at a slightly larger size than body text.
+   Distinct from .digest-section-label/.digest-focus-item, which remain
+   in use for the Companies/Sectors-in-Focus section further down the page. */
+.hero-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+}
+.hero-byline {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+}
+.hero-byline .mood-constructive { color: var(--bullish); }
+.hero-byline .mood-cautious { color: var(--bearish); }
+.hero-byline .mood-mixed, .hero-byline .mood-quiet { color: var(--muted); }
+.hero-narrative {
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+/* "At a glance" / "Worth watching" expanders reuse Streamlit's native
+   stExpander styling (already themed below) for their outer shell, so
+   only the inner row styling needs to be defined here. */
+.hero-glance-item {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.94rem;
+    color: var(--text);
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+}
+.hero-glance-item:first-of-type { border-top: none; }
+
+.hero-watch-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 14px;
+    margin-bottom: 8px;
+}
+.hero-watch-label:first-of-type { margin-top: 0; }
+.hero-watch-item {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    padding: 4px 0 8px 14px;
+    margin-bottom: 4px;
+}
+.hero-watch-item.risk { border-left: 2px solid var(--bearish); }
+.hero-watch-item.opportunity { border-left: 2px solid var(--bullish); }
 
 hr { border-color: var(--border) !important; }
 [data-testid="stMetric"] {
