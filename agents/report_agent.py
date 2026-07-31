@@ -14,6 +14,7 @@ markdown parsing of the narrative is used, and no LLM calls beyond the
 existing narrative call are added.
 """
 import argparse
+import logging
 from collections import defaultdict
 from datetime import date, timedelta
 
@@ -23,6 +24,9 @@ from backend.models.models import (
     NewsCompanyTag, NewsIndustryTag,
 )
 from utils.llm_client import call_llm
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 PERIOD_DAYS = {"daily": 1, "weekly": 7, "monthly": 30}
 
@@ -186,9 +190,15 @@ def build_report(period: str = "daily") -> str:
             try:
                 narrative = call_llm(prompt)
             except Exception as exc:
+                # Log the real exception for debugging (visible in GitHub
+                # Actions run logs), but never show raw exception text
+                # (API URLs, quota metadata, etc.) to the end user — a
+                # fallback message should stay clean regardless of what
+                # actually went wrong under the hood.
+                logger.warning("Narrative generation failed for %s digest: %s", period, exc)
                 narrative = (
-                    "AI narrative unavailable today (likely hit the free daily "
-                    f"quota). Raw items are still listed below. ({exc})"
+                    "AI narrative unavailable today (likely hit the free daily quota). "
+                    "Raw items are still listed below."
                 )
             content = f"{narrative}\n\n---\n\n### Raw items covered\n\n{digest_material}"
 
