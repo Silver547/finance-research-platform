@@ -7,7 +7,6 @@ from dashboard.db_helpers import get_news_for_industry
 from dashboard.theme import inject_theme
 from config.settings import settings
 
-st.set_page_config(page_title="Sectors", layout="wide", page_icon="🏭")
 inject_theme()
 st.title("Industry Intelligence")
 

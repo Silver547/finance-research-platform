@@ -8,7 +8,6 @@ import plotly.express as px
 from dashboard.db_helpers import get_macro_indicators
 from dashboard.theme import inject_theme, PLOTLY_LAYOUT
 
-st.set_page_config(page_title="Macro Dashboard", layout="wide", page_icon="🌍")
 inject_theme()
 st.title("Macro Dashboard")
 

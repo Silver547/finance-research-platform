@@ -2,7 +2,7 @@
 Builds a daily/weekly/monthly digest from what's already in the DB
 (no new LLM calls needed for the raw data — it just composes what the
 tagging/impact agents already produced, plus one LLM call to write the
-narrative wrap-up + editorial headline).
+narrative wrap-up, headline, confidence/importance scores, and drivers).
 
 Phase 6 addition: alongside `content` (the narrative + raw-items text), this
 now also assembles `structured_digest` — structured data for the dashboard's
@@ -13,9 +13,33 @@ sentiment_score, origin, risks, opportunities, company/industry tags). No
 markdown parsing of the narrative is used.
 
 Phase 8 addition: the single narrative LLM call now also returns a short
-editorial-style headline (8-15 words) via one combined JSON response,
-rather than a second LLM call — kept to one call per report generation to
+editorial headline (8-15 words), kept to one call per report generation to
 respect the free-tier daily quota.
+
+Phase 9 (V2 Home redesign) addition: the same combined LLM call now also
+returns:
+  - confidence (0-100): how certain the AI is that its read of today's
+    market is correct
+  - importance (0-100): how much today's market should care, i.e. impact
+    magnitude, not certainty
+  - drivers: the 3-5 main forces moving the market today (e.g. "Oil",
+    "Fed", "RBI"), each with its own importance/confidence, a one-line
+    summary, and 2-3 supporting headline titles drawn from material
+    already in the prompt.
+
+Confidence and Importance are intentionally report-level concepts only —
+they describe today's market and today's drivers, not individual news
+articles. Individual NewsAISummary rows are untouched by this phase; see
+PROJECT decision log for the reasoning (avoids ingestion-pipeline changes
+for a need that's fully served at the aggregate level today).
+
+Drivers are similarly a report-level concept, not a per-headline tag —
+"what are the main forces moving today's market", not "what category does
+every headline belong to". Driver names are open-ended (the LLM is not
+restricted to a fixed list) and are not persisted anywhere per-headline;
+if per-headline Driver tagging is ever needed (filtering, search, trend
+analysis), that is a deliberate future pipeline phase, not implied by this
+one.
 """
 import argparse
 import logging
@@ -39,9 +63,11 @@ PERIOD_DAYS = {"daily": 1, "weekly": 7, "monthly": 30}
 SENTIMENT_THRESHOLD = 0.15
 MAX_FOCUS_ITEMS = 5
 MAX_HIGHLIGHTS = 5
+MAX_DRIVERS = 5
+MAX_SUPPORTING_HEADLINES_PER_DRIVER = 3
 
-# Fallbacks used when the combined headline+narrative LLM call fails
-# entirely (e.g. free-tier quota exceeded) or returns malformed JSON.
+# Fallbacks used when the combined LLM call fails entirely (e.g. free-tier
+# quota exceeded) or returns malformed JSON.
 FALLBACK_HEADLINE = "Today's Market Update"
 FALLBACK_NARRATIVE = (
     "AI narrative unavailable today (likely hit the free daily quota). "
@@ -54,6 +80,47 @@ def _split_sectors(raw: str) -> list[str]:
     if not raw:
         return []
     return [s.strip() for s in raw.split(",") if s.strip()]
+
+
+def _clamp_score(value) -> int:
+    """Coerces an arbitrary LLM-returned value into a safe 0-100 int.
+    Anything unparseable becomes 0 rather than raising, consistent with
+    this project's fail-safe-not-fail-crash convention."""
+    try:
+        value = int(round(float(value)))
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(100, value))
+
+
+def _parse_drivers(raw) -> list[dict]:
+    """Defensively parses the LLM's 'drivers' list into a clean, bounded
+    structure. Any malformed entry is skipped rather than crashing the
+    whole report — same fail-safe pattern used throughout this project."""
+    if not isinstance(raw, list):
+        return []
+
+    parsed = []
+    for item in raw[:MAX_DRIVERS]:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()
+        if not name:
+            continue
+
+        supporting = item.get("supporting_headlines", [])
+        if not isinstance(supporting, list):
+            supporting = []
+        supporting = [str(h).strip() for h in supporting if str(h).strip()]
+
+        parsed.append({
+            "name": name,
+            "importance": _clamp_score(item.get("importance")),
+            "confidence": _clamp_score(item.get("confidence")),
+            "summary": str(item.get("summary", "")).strip(),
+            "supporting_headlines": supporting[:MAX_SUPPORTING_HEADLINES_PER_DRIVER],
+        })
+    return parsed
 
 
 def _aggregate_companies(session, news_ids: list[int], sentiment_by_news_id: dict) -> tuple[list[str], list[str]]:
@@ -196,13 +263,34 @@ def build_report(period: str = "daily") -> str:
                 f"You are writing a {period} financial research digest for a student investor. "
                 "Using ONLY the bullet points below (already-summarized, already-classified "
                 "news items), respond with ONLY a single JSON object (no other text, no markdown "
-                "fences) with exactly two keys:\n"
+                "fences) with exactly five keys:\n"
                 '  "headline": an editorial-style title, approximately 8-15 words, summarizing '
                 "the single dominant market story from the items below — written like a "
                 "newspaper front-page headline, not a full sentence recap\n"
                 '  "narrative": a concise narrative overview covering what mattered most, any '
                 "themes connecting multiple items, and what to watch next\n"
-                "Do not recommend buying or selling anything in either field.\n\n"
+                '  "confidence": an integer 0-100 representing how certain you are that your '
+                "reading of today's market is correct — consider the number of supporting "
+                "articles, how consistent they are with each other, and how clear the causal "
+                "relationships are\n"
+                '  "importance": an integer 0-100 representing how much today's market should '
+                "care about today overall — consider macro significance, the number of sectors "
+                "and companies affected, and expected duration of the impact. Importance is NOT "
+                "the same as confidence: a highly important event can still have only moderate "
+                "confidence, and vice versa\n"
+                '  "drivers": a list of the 3-5 main forces actually moving the market today '
+                '(e.g. "Oil", "Fed", "RBI", "Inflation", "China", "AI", "IT Earnings", "Dollar", '
+                '"Geopolitics", "Consumption", "Manufacturing" — or any other name that genuinely '
+                "fits; do not force-fit an item into one of these examples if it doesn't apply, "
+                "and do not invent a driver that isn't actually supported by the items below). "
+                "Each driver is an object with:\n"
+                '    "name": short driver name (1-3 words)\n'
+                '    "importance": integer 0-100 for this specific driver\n'
+                '    "confidence": integer 0-100 for this specific driver\n'
+                '    "summary": one sentence explaining what this driver is doing today\n'
+                '    "supporting_headlines": 2-3 headline titles from the bullet points below '
+                "that relate to this driver, copied exactly as they appear below\n\n"
+                "Do not recommend buying or selling anything in any field.\n\n"
                 f"{digest_material}"
             )
             try:
@@ -211,6 +299,9 @@ def build_report(period: str = "daily") -> str:
                 narrative = (result.get("narrative") or "").strip()
                 if not headline or not narrative:
                     raise ValueError("LLM response missing 'headline' or 'narrative'")
+                confidence = _clamp_score(result.get("confidence"))
+                importance = _clamp_score(result.get("importance"))
+                drivers = _parse_drivers(result.get("drivers"))
             except Exception as exc:
                 # Log the real exception for debugging (visible in GitHub
                 # Actions run logs), but never show raw exception text
@@ -220,6 +311,9 @@ def build_report(period: str = "daily") -> str:
                 logger.warning("Headline/narrative generation failed for %s digest: %s", period, exc)
                 headline = FALLBACK_HEADLINE
                 narrative = FALLBACK_NARRATIVE
+                confidence = 0
+                importance = 0
+                drivers = []
             content = f"{narrative}\n\n---\n\n### Raw items covered\n\n{digest_material}"
 
             # --- Structured digest (Phase 6) ---
@@ -246,6 +340,9 @@ def build_report(period: str = "daily") -> str:
             structured_digest = {
                 "headline": headline,
                 "overall_summary": narrative,
+                "confidence": confidence,
+                "importance": importance,
+                "drivers": drivers,
                 "major_domestic": _top_highlights(rows, "Domestic"),
                 "major_global": _top_highlights(rows, "Global"),
                 "companies_positive": companies_positive,
@@ -253,9 +350,9 @@ def build_report(period: str = "daily") -> str:
                 "sectors_positive": sectors_positive,
                 "sectors_negative": sectors_negative,
                 # Risks/Opportunities logic is unchanged and still populated
-                # here — only the Hero section's rendering of these was
-                # removed (Home.py), not this underlying data. Intended for
-                # reintroduction as its own analysis section later.
+                # here — the Hero section stopped rendering these directly
+                # (Home.py), but Top Risk/Top Opportunity in the V2 Market
+                # Snapshot card reads risks[0]/opportunities[0] from here.
                 "risks": _top_texts(rows, "risks"),
                 "opportunities": _top_texts(rows, "opportunities"),
             }

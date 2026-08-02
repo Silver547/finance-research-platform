@@ -301,6 +301,170 @@ hr { border-color: var(--border) !important; }
     font-family: 'IBM Plex Mono', monospace !important;
     font-size: 0.85rem !important;
 }
+
+/* ============================================================
+   V2 Navigation Header (Phase 1). Custom-built rather than relying
+   on st.navigation's own top-position widget: (a) that widget can't
+   list a page as routable while hiding it from the visible menu,
+   which the Watchlist product decision requires, and (b) the pinned
+   streamlit==1.38.0 predates position="top" (added in 1.46.0) anyway,
+   so a built-in top bar isn't even available on this version. This
+   header is rendered once, in dashboard/Home.py (the st.navigation
+   router), before pg.run(), so it appears above every page. */
+.app-wordmark {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text);
+    padding-top: 6px;
+}
+.app-header-rule {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 4px 0 28px 0;
+}
+/* Best-effort selector for st.page_link's rendered anchor — Streamlit's
+   internal test ids can shift between versions; if these links render
+   unstyled after deploy, inspect the live DOM and adjust the selector,
+   the page_link calls themselves are unaffected either way. */
+[data-testid="stPageLink"] {
+    font-family: 'IBM Plex Sans', sans-serif !important;
+}
+[data-testid="stPageLink"] p {
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+    font-size: 0.92rem !important;
+}
+[data-testid="stPageLink"]:hover p {
+    color: var(--accent) !important;
+}
+
+/* ============================================================
+   Hero V2 (Phase 1) — large mood icon + headline, minimal text by
+   default. Distinct from the earlier .hero-eyebrow/.hero-byline/
+   .hero-headline/.hero-narrative set (still used nowhere now that
+   Today's content moved to pages/today.py with this new treatment,
+   but left in place above rather than deleted — no other page
+   references them, and removing unused CSS carries no behavior
+   risk either way, so it's left for now rather than treated as an
+   in-scope cleanup task this phase).
+   ============================================================ */
+.hero-mood-icon {
+    font-size: 3.4rem;
+    line-height: 1;
+    margin-bottom: 10px;
+}
+.hero-v2-headline {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 1.75rem;
+    line-height: 1.25;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+/* Market Snapshot card */
+.snapshot-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+}
+.snapshot-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 9px 0;
+    border-top: 1px solid var(--border);
+}
+.snapshot-row:first-of-type { border-top: none; }
+.snapshot-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.76rem;
+    color: var(--muted);
+    white-space: nowrap;
+    padding-top: 1px;
+}
+.snapshot-value {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+    text-align: right;
+}
+
+/* ============================================================
+   Global Drivers (Phase 1)
+   ============================================================ */
+.driver-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+.driver-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 2px;
+}
+.driver-summary {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+.driver-headline {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.8rem;
+    color: var(--muted);
+    padding: 2px 0;
+}
+
+/* ============================================================
+   Group B preview sections (Phase 1) — every retained V1 section is
+   visibly marked as a compact preview, not a final destination.
+   ============================================================ */
+.preview-label {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.64rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px dashed var(--border-strong);
+    border-radius: 10px;
+    padding: 1px 8px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+.mover-item {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.88rem;
+    color: var(--text);
+    padding: 6px 0;
+    border-top: 1px solid var(--border);
+}
+.mover-item:first-of-type { border-top: none; }
+.research-compact-item {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 3px 0;
+}
+.dispatch-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-right: 8px;
+}
 </style>
 """
 

@@ -3,67 +3,33 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 import streamlit as st
-from backend.db.session import get_session, init_db
-from backend.models.models import User, Watchlist, Company
-from dashboard.db_helpers import get_all_companies, get_news_for_company
+import pandas as pd
+import plotly.express as px
+from dashboard.db_helpers import get_macro_indicators
+from dashboard.theme import inject_theme, PLOTLY_LAYOUT
 
-from dashboard.theme import inject_theme
-
-st.set_page_config(page_title="Watchlist", layout="wide")
 inject_theme()
-st.title("⭐ Watchlist")
+st.title("Macro Dashboard")
 
-init_db()
-session = get_session()
+rows = get_macro_indicators()
 
-DEFAULT_USERNAME = "student"
-user = session.query(User).filter_by(username=DEFAULT_USERNAME).first()
-if not user:
-    user = User(username=DEFAULT_USERNAME)
-    session.add(user)
-    session.commit()
-
-companies = get_all_companies()
-ticker_options = [c.ticker for c in companies]
-
-if not ticker_options:
-    st.info("No companies in the database yet — run the daily pipeline at least once.")
+if not rows:
+    st.info("No macro data yet. Run `python pipelines/macro/fetch_macro.py`.")
 else:
-    to_add = st.selectbox("Add a company to your watchlist", ticker_options)
-    if st.button("Add to watchlist"):
-        company = session.query(Company).filter_by(ticker=to_add).first()
-        exists = (
-            session.query(Watchlist)
-            .filter_by(user_id=user.user_id, company_id=company.company_id)
-            .first()
-        )
-        if not exists:
-            session.add(Watchlist(user_id=user.user_id, company_id=company.company_id))
-            session.commit()
-            st.success(f"Added {to_add}.")
-        else:
-            st.info(f"{to_add} is already on your watchlist.")
+    df = pd.DataFrame([{
+        "indicator": r.indicator_name, "country": r.country,
+        "period": r.period, "value": r.value,
+    } for r in rows])
 
-    st.divider()
-    st.subheader("Your Watchlist")
-    watch_rows = (
-        session.query(Watchlist, Company)
-        .join(Company, Company.company_id == Watchlist.company_id)
-        .filter(Watchlist.user_id == user.user_id)
-        .all()
-    )
+    indicator = st.selectbox("Indicator", sorted(df["indicator"].unique()))
+    subset = df[df["indicator"] == indicator]
 
-    if not watch_rows:
-        st.info("Your watchlist is empty — add a company above.")
-    else:
-        for watch, company in watch_rows:
-            with st.expander(f"{company.ticker} — {company.name}"):
-                news_rows = get_news_for_company(company.ticker, limit=5)
-                if not news_rows:
-                    st.write("No recent tagged news.")
-                else:
-                    for news, summary in news_rows:
-                        st.write(f"**[{summary.classification}]** {news.title}")
-                        st.caption(summary.why_it_matters)
+    fig = px.line(subset, x="period", y="value", color="country", markers=True, title=indicator)
+    fig.update_layout(**PLOTLY_LAYOUT)
+    st.plotly_chart(fig, use_container_width=True)
 
-session.close()
+    with st.expander("Raw data"):
+        st.dataframe(subset.sort_values("period", ascending=False), use_container_width=True)
+
+st.divider()
+st.caption("Extend `pipelines/macro/fetch_macro.py` with more indicators as needed.")

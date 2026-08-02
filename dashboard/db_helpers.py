@@ -140,12 +140,10 @@ def _rank_key(pair):
 def get_theme_groups(period: str = "daily", max_groups: int = 6, max_items: int = 3):
     """Groups the period's tagged news by Industry, as a best-effort proxy
     for 'economic themes' (Oil, Banking, etc.) until a dedicated Theme entity
-    exists in the data model — see Known Issues / follow-up notes. Cannot
-    surface cross-cutting themes that aren't tracked industries (Inflation,
-    China, AI). Returns a list of {"name", "count", "items"} dicts, ordered
-    by how many headlines touched that industry this period; each group's
-    items are the most significant (Urgent-first, then |sentiment|),
-    capped at max_items."""
+    exists in the data model. Not called by the V2 Today page (Major Market
+    Themes is hidden there per the V1->V2 transition plan, superseded by
+    report-level Drivers) — kept here for any other page that still wants
+    sector-grouped news."""
     _ensure_db()
     session = get_session()
     try:
@@ -179,8 +177,8 @@ def get_theme_groups(period: str = "daily", max_groups: int = 6, max_items: int 
 def get_transmission_items(period: str = "daily", limit: int = 4):
     """Finds the period's most significant Global-origin headlines and
     attaches their tagged sectors/companies, to power the Global -> India
-    Transmission Map. Returns a list of {"news", "summary", "sectors",
-    "companies"} dicts, most significant first."""
+    Transmission Map (V2: 'Economic Ripple'). Returns a list of {"news",
+    "summary", "sectors", "companies"} dicts, most significant first."""
     _ensure_db()
     session = get_session()
     try:
@@ -222,14 +220,14 @@ def get_transmission_items(period: str = "daily", limit: int = 4):
 
 
 def get_focus_reasons(period: str = "daily"):
-    """For the Companies/Sectors-in-Focus section: structured_digest only
+    """For a full Companies/Sectors-in-Focus view: structured_digest only
     stores which companies/sectors were net-positive or net-negative, not
     *why*. This finds the single most significant headline behind each
     tagged company/sector this period and returns its why_it_matters text
     as a plain-language reason. Returns {"companies": {name: reason},
-    "sectors": {name: reason}}; a name with no matching headline (e.g. a
-    naming mismatch) simply won't appear, and callers should show a
-    graceful fallback in that case."""
+    "sectors": {name: reason}}. Not called by the V2 Today page's compact
+    'Market Movers (Preview)' section, which deliberately shows names only,
+    no reasons — kept here for the full Phase 2 redesign of that section."""
     _ensure_db()
     session = get_session()
     try:
@@ -286,12 +284,9 @@ def get_focus_reasons(period: str = "daily"):
 
 def get_hero_counts(period: str = "daily"):
     """Accurate (uncapped) counts of Domestic-origin, Global-origin, and
-    Urgent-classified items for the period, for the Hero section's badge
-    row. structured_digest's major_domestic/major_global lists are capped
-    at MAX_HIGHLIGHTS (5) in report_agent.py, so they can't be used to
-    derive a true count on a day with more than 5 of either — this runs a
-    separate, lightweight query (only origin/classification columns, not
-    full rows) instead. Returns {"domestic": int, "global": int, "urgent": int}."""
+    Urgent-classified items for the period. Not used by the V2 Today page
+    (superseded by the Market Snapshot's Confidence/Importance), kept for
+    any page that still wants raw origin/urgency counts."""
     _ensure_db()
     session = get_session()
     try:
@@ -309,5 +304,70 @@ def get_hero_counts(period: str = "daily"):
             "global": sum(1 for origin, _ in rows if origin == "Global"),
             "urgent": sum(1 for _, classification in rows if classification == "Urgent"),
         }
+    finally:
+        session.close()
+
+
+# ---------------------------------------------------------------------------
+# New for the V2 Today page (Phase 1) and Research page.
+# ---------------------------------------------------------------------------
+
+def get_top_dispatches(limit: int = 5):
+    """Top N most significant recent headlines (Urgent-first, then
+    |sentiment_score|), for the V2 Today page's Latest Dispatches preview
+    and its 'View Full Feed' expansion (called with a larger limit and
+    sliced). Pulls from a modest recent pool (not period-filtered) since
+    this answers 'what should I read right now', not a period aggregate."""
+    _ensure_db()
+    session = get_session()
+    try:
+        pool = (
+            session.query(News, NewsAISummary)
+            .join(NewsAISummary, NewsAISummary.news_id == News.news_id)
+            .filter(News.is_duplicate.is_(False))
+            .order_by(News.published_at.desc())
+            .limit(max(limit, 50))
+            .all()
+        )
+        return sorted(pool, key=_rank_key)[:limit]
+    finally:
+        session.close()
+
+
+def get_recent_reports(limit: int = 10):
+    """Most recently generated reports across all periods, for the
+    Research page's 'Recent Reports' section."""
+    _ensure_db()
+    session = get_session()
+    try:
+        return (
+            session.query(Report)
+            .order_by(Report.generated_at.desc())
+            .limit(limit)
+            .all()
+        )
+    finally:
+        session.close()
+
+
+def search_news(query: str, limit: int = 20):
+    """Simple case-insensitive substring search over headline titles, for
+    the Research page's Universal Search. Not a full-text search engine —
+    a straightforward SQL match (via SQLAlchemy's dialect-portable ilike),
+    sufficient for a personal research tool's current scale."""
+    _ensure_db()
+    session = get_session()
+    try:
+        pattern = f"%{query}%"
+        rows = (
+            session.query(News, NewsAISummary)
+            .join(NewsAISummary, NewsAISummary.news_id == News.news_id)
+            .filter(News.title.ilike(pattern))
+            .filter(News.is_duplicate.is_(False))
+            .order_by(News.published_at.desc())
+            .limit(limit)
+            .all()
+        )
+        return rows
     finally:
         session.close()

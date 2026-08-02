@@ -9,7 +9,6 @@ from dashboard.theme import inject_theme, PLOTLY_LAYOUT
 from pipelines.stocks.fetch_prices import fetch_price_history
 from config.settings import settings
 
-st.set_page_config(page_title="Company", layout="wide", page_icon="🏢")
 inject_theme()
 st.title("Company Intelligence")
 
