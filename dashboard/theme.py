@@ -94,6 +94,21 @@ p, div, span, label {
     font-size: 1.02rem;
     color: var(--text);
 }
+/* Regression fix (V2 Phase 1): Latest Dispatches and Universal Search now
+   put .dispatch-title on a real <a> tag (see dashboard/pages/today.py and
+   research.py) instead of a static <span>, restoring click-through to the
+   source article. Scoped to a.dispatch-title specifically so the existing
+   <div class="dispatch-title"> usage on 2_Sectors.py/3_Company.py/
+   5_Watchlist.py (paired with their own st.expander + link, unaffected by
+   this regression) renders exactly as before — no visual change there. */
+a.dispatch-title {
+    text-decoration: none;
+    cursor: pointer;
+}
+a.dispatch-title:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
 
 /* Chip component (Phase 4/5) — Risk / Opportunity / Sector tags.
    Deliberately pill-shaped (vs. rectangular .dispatch-stamp) so extracted/
