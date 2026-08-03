@@ -273,7 +273,7 @@ def build_report(period: str = "daily") -> str:
                 "reading of today's market is correct — consider the number of supporting "
                 "articles, how consistent they are with each other, and how clear the causal "
                 "relationships are\n"
-                '  "importance": an integer 0-100 representing how much today's market should '
+                "  \"importance\": an integer 0-100 representing how much today's market should "
                 "care about today overall — consider macro significance, the number of sectors "
                 "and companies affected, and expected duration of the impact. Importance is NOT "
                 "the same as confidence: a highly important event can still have only moderate "
