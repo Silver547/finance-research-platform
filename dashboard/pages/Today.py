@@ -56,7 +56,8 @@ digest_error = False
 try:
     with st.spinner(f"Loading {period_label.lower()}'s market read..."):
         report = get_latest_report(period_key)
-except Exception:
+except Exception as exc:
+    st.exception(exc)  # TEMPORARY — remove once diagnosed
     report = None
     digest_error = True
 
