@@ -56,8 +56,7 @@ digest_error = False
 try:
     with st.spinner(f"Loading {period_label.lower()}'s market read..."):
         report = get_latest_report(period_key)
-except Exception as exc:
-    st.exception(exc)  # TEMPORARY — remove once diagnosed
+except Exception:
     report = None
     digest_error = True
 
@@ -253,7 +252,7 @@ else:
         for news, summary in top_dispatches:
             st.markdown(
                 f'<span class="dispatch-badge">{classification_dot(summary.classification)} {summary.classification}</span>'
-                f'<span class="dispatch-title">{news.title}</span>'
+                f'<a href="{news.url}" class="dispatch-title">{news.title}</a>'
                 f'<div class="dispatch-meta">{news.source}</div>',
                 unsafe_allow_html=True,
             )
@@ -265,7 +264,7 @@ else:
             for news, summary in more_dispatches:
                 st.markdown(
                     f'<span class="dispatch-badge">{classification_dot(summary.classification)} {summary.classification}</span>'
-                    f'<span class="dispatch-title">{news.title}</span>'
+                    f'<a href="{news.url}" class="dispatch-title">{news.title}</a>'
                     f'<div class="dispatch-meta">{news.source}</div>',
                     unsafe_allow_html=True,
                 )

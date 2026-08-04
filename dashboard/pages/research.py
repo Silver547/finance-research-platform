@@ -34,7 +34,7 @@ if query.strip():
         for news, summary in results:
             st.markdown(
                 f'<span class="dispatch-badge">{classification_dot(summary.classification)} {summary.classification}</span>'
-                f'<span class="dispatch-title">{news.title}</span>'
+                f'<a href="{news.url}" class="dispatch-title">{news.title}</a>'
                 f'<div class="dispatch-meta">{news.source} · {news.published_at}</div>',
                 unsafe_allow_html=True,
             )
