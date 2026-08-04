@@ -110,6 +110,22 @@ a.dispatch-title:hover {
     text-decoration: underline;
 }
 
+/* Economic Ripple headline click-fix — same pattern as a.dispatch-title
+   above, but preserves what this specific text looked like before (plain
+   bold text, inheriting --text color via markdown **bold**, no dedicated
+   class) rather than reusing .dispatch-title's own styling, which has a
+   different font-size/weight tuned for the news-feed card context. */
+a.ripple-headline {
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    cursor: pointer;
+}
+a.ripple-headline:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
 /* Chip component (Phase 4/5) — Risk / Opportunity / Sector tags.
    Deliberately pill-shaped (vs. rectangular .dispatch-stamp) so extracted/
    inferred AI content reads as distinct from classification badges.

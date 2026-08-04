@@ -154,7 +154,7 @@ else:
         news, summary = item["news"], item["summary"]
         with st.container(border=True):
             st.markdown('<span class="dispatch-stamp stamp-global">Global Event</span>', unsafe_allow_html=True)
-            st.markdown(f"**{news.title}**")
+            st.markdown(f'<a href="{news.url}" class="ripple-headline">{news.title}</a>', unsafe_allow_html=True)
             st.markdown('<div class="digest-section-label">↓ Indian Impact</div>', unsafe_allow_html=True)
             st.markdown(summary.india_relevance or "_No specific India linkage identified for this story._")
             if item["sectors"]:
@@ -174,7 +174,7 @@ else:
                 news, summary = item["news"], item["summary"]
                 with st.container(border=True):
                     st.markdown('<span class="dispatch-stamp stamp-global">Global Event</span>', unsafe_allow_html=True)
-                    st.markdown(f"**{news.title}**")
+                    st.markdown(f'<a href="{news.url}" class="ripple-headline">{news.title}</a>', unsafe_allow_html=True)
                     st.markdown('<div class="digest-section-label">↓ Indian Impact</div>', unsafe_allow_html=True)
                     st.markdown(summary.india_relevance or "_No specific India linkage identified for this story._")
                     if item["sectors"]:
