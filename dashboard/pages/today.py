@@ -20,6 +20,12 @@ final destination, later phases replace each with its named V2 section):
 Major Market Themes (V1) is NOT here — Group C, hidden entirely, its
 information now lives in Hero/Snapshot/Drivers instead (duplication,
 per product decision).
+Sprint 2.1 (Hero polish): the Hero's default view now also shows "Market
+Highlights" — up to 4 existing headline titles (2 domestic + 2 global,
+already produced by report_agent.py, zero new AI calls) — between the
+headline and the "Read Full Story" expander, which is otherwise unchanged.
+Reuses the existing (previously dormant) .hero-glance-item CSS class; no
+new styling introduced.
 """
 import sys
 from pathlib import Path
@@ -40,6 +46,19 @@ from dashboard.components import (
     render_driver_card,
     preview_label,
 )
+
+# Presentation-only truncation for Market Highlights (Sprint 2.1) — no AI
+# rewriting, just a clean cutoff with an ellipsis for excessively long
+# headline titles. 80 chars keeps a single headline to roughly one line
+# at the Hero's current width.
+MARKET_HIGHLIGHT_MAX_CHARS = 80
+
+
+def _truncate_headline(title: str, max_chars: int = MARKET_HIGHLIGHT_MAX_CHARS) -> str:
+    if len(title) <= max_chars:
+        return title
+    return title[:max_chars].rstrip() + "…"
+
 
 PERIOD_OPTIONS = {"Today": "daily", "This Week": "weekly", "This Month": "monthly"}
 
@@ -100,6 +119,13 @@ else:
         st.markdown(f'<div class="hero-mood-icon">{mood_dot(mood_label)}</div>', unsafe_allow_html=True)
         if digest.get("headline"):
             st.markdown(f'<div class="hero-v2-headline">{digest["headline"]}</div>', unsafe_allow_html=True)
+
+        market_highlights = digest.get("major_domestic", [])[:2] + digest.get("major_global", [])[:2]
+        if market_highlights:
+            st.markdown('<div class="digest-section-label">Market Highlights</div>', unsafe_allow_html=True)
+            for item in market_highlights:
+                st.markdown(f'<div class="hero-glance-item">{_truncate_headline(item)}</div>', unsafe_allow_html=True)
+
         with st.expander("Read Full Story"):
             st.caption(f"Generated {report.generated_at}")
             if digest.get("overall_summary"):
