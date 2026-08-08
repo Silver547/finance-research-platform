@@ -92,8 +92,15 @@ if digest_error:
 elif report is None:
     st.info(f"No {period_label.lower()} report is available yet. It will appear after the next scheduled run.")
 elif digest is None:
-    st.caption(f"Generated {report.generated_at}")
-    st.markdown(report.content)
+    # Legacy report (predates the headline/confidence/importance/drivers
+    # schema) — no structured_digest, so no Market Highlights are possible
+    # here (major_domestic/major_global don't exist for this report). Still
+    # applies the same Sprint 2.1 progressive-disclosure principle: the
+    # narrative is never shown by default, only inside "Read Full Story",
+    # exactly like the populated-digest branch below.
+    with st.expander("Read Full Story"):
+        st.caption(f"Generated {report.generated_at}")
+        st.markdown(report.content)
 else:
     # =========================================================================
     # 1 & 2. HERO + MARKET SNAPSHOT (two-column top band)
